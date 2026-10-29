@@ -16,6 +16,8 @@ One icon per device. No vendor software.
 
 <img src="docs/icons.png" alt="Every icon state: headset, mouse, keyboard, controllers and Bluetooth at 100 % down to 15 %, charging and asleep" width="560">
 
+**English** | [简体中文](README.zh-CN.md)
+
 </div>
 
 ## Features
@@ -44,8 +46,6 @@ Right-click any icon to rename the device, hide it, set its alert level, change 
 The interface follows the Windows display language: a Chinese Windows gets the Chinese UI, everything else the English one. Pick another one under **Preferences → Language** / **首选项 → 界面语言**. The choice is kept as `"language"` in `%APPDATA%\HaloBattery\config.json` (`"auto"` follows Windows, `"en"` is English, `"zh-CN"` Simplified Chinese, `"zh-TW"` Traditional Chinese when a file for it exists).
 
 Translations are plain JSON files in [`lang/`](lang/). The English text is the key, so an entry that is missing simply falls back to English — adding a language is a matter of dropping `lang/<code>.json` next to the app (and into `_internal` for the packaged build).
-
-> This fork adds the Simplified Chinese translation. The automatic update check still points at the upstream releases, so turn **Check for updates** off if a new English release would overwrite the translation.
 
 ## Supported devices
 

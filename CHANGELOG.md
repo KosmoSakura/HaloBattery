@@ -6,6 +6,15 @@ and the project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **A Simplified Chinese interface**: every menu, notification, tooltip, the "time left"
+  line and the What's new window are translated. The strings live in `lang/<code>.json`
+  with the English text as the key, so a missing entry falls back to English. `"auto"`
+  follows the Windows display language, and **Preferences → Language** switches it at
+  runtime without a restart. Chinese windows use Microsoft YaHei, and the packaged build
+  carries `lang/` along (a `lang/` folder next to the .exe is used when one is there).
+- **A Chinese README** (`README.zh-CN.md`), linked from the English one.
+
 ### Changed
 - **A tidier repository and a shorter README**: the app's modules moved into the `halo/`
   package (`halo_battery.pyw` stays the entry point), the .bat helpers into `scripts/`
