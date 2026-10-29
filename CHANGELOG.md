@@ -26,6 +26,25 @@ and the project follows [Semantic Versioning](https://semver.org/).
   "connected". The controller's own coarse level (empty / low / medium / full) is shown
   instead; when Windows does report a Bluetooth level, that one is still used.
 
+## [1.15.1] - 2026-10-29
+
+This fork adds a Simplified Chinese interface; everything else is Halo Battery 1.15.0.
+
+### Added
+- **Simplified Chinese interface**: every menu, notification, tooltip and the "What's new"
+  window are translated. The interface follows the Windows display language, and
+  **Preferences → Language** switches it at runtime without a restart. Translations are
+  plain JSON files in `lang/` with the English text as the key, so a missing entry falls
+  back to English and a damaged file can never blank out the menu.
+- **A Chinese README** (`README.zh-CN.md`), linked from the English one.
+
+### Changed
+- Chinese windows use Microsoft YaHei, and the cached fonts follow a language change.
+- The packaged build carries `lang/` along; a `lang/` folder next to the .exe is used when
+  one is there.
+- `scripts/build_exe.bat` picks an interpreter that can load ctypes (some 3.14 builds
+  cannot) and says which folder to run afterwards.
+
 ## [1.15.0] - 2026-10-12
 
 Updates install from the app: **Update to vX.Y.Z** downloads the new version, checks it,
@@ -990,7 +1009,8 @@ First public release.
   in or unplugged.
 - Settings and the autostart entry are migrated from the app's earlier name, Battery Tray.
 
-[Unreleased]: ../../compare/v1.15.0...HEAD
+[Unreleased]: ../../compare/v1.15.1...HEAD
+[1.15.1]: ../../compare/v1.15.0...v1.15.1
 [1.15.0]: ../../compare/v1.14.0...v1.15.0
 [1.14.0]: ../../compare/v1.13.0...v1.14.0
 [1.13.0]: ../../compare/v1.12.0...v1.13.0
