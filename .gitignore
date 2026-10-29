@@ -30,6 +30,9 @@ version_info.txt
 AGENTS.md
 /agents_memory
 
+# Release zip (HaloBattery-<version>.zip, made next to the project for uploads)
+HaloBattery-*.zip
+
 # Portable mode (portable.txt): the app keeps its data next to itself
 portable.txt
 config.json

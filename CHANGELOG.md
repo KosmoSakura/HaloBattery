@@ -26,6 +26,17 @@ and the project follows [Semantic Versioning](https://semver.org/).
   "connected". The controller's own coarse level (empty / low / medium / full) is shown
   instead; when Windows does report a Bluetooth level, that one is still used.
 
+## [1.15.2] - 2026-10-29
+
+The update check now looks at this fork's releases.
+
+### Changed
+- **The update check follows this fork**: `halo/updates.py` still pointed at the upstream
+  repository, so Halo Battery would have offered to install the upstream English build
+  over the translated one. It now reads this fork's releases, so an update keeps the
+  Chinese interface.
+- The README badges (release, downloads and licence) point at this fork as well.
+
 ## [1.15.1] - 2026-10-29
 
 This fork adds a Simplified Chinese interface; everything else is Halo Battery 1.15.0.
@@ -1009,7 +1020,8 @@ First public release.
   in or unplugged.
 - Settings and the autostart entry are migrated from the app's earlier name, Battery Tray.
 
-[Unreleased]: ../../compare/v1.15.1...HEAD
+[Unreleased]: ../../compare/v1.15.2...HEAD
+[1.15.2]: ../../compare/v1.15.1...v1.15.2
 [1.15.1]: ../../compare/v1.15.0...v1.15.1
 [1.15.0]: ../../compare/v1.14.0...v1.15.0
 [1.14.0]: ../../compare/v1.13.0...v1.14.0

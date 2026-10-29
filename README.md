@@ -7,10 +7,10 @@
 **Battery levels of your wireless mouse, keyboard, headset and controller, right in the Windows tray.**<br>
 One icon per device. No vendor software.
 
-[![Latest release](https://img.shields.io/github/v/release/HeyOkay/HaloBattery?label=release&color=2ea043)](../../releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/HeyOkay/HaloBattery/total?color=2ea043)](../../releases)
+[![Latest release](https://img.shields.io/github/v/release/KosmoSakura/HaloBattery?label=release&color=2ea043)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/KosmoSakura/HaloBattery/total?color=2ea043)](../../releases)
 [![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#install)
-[![License: MIT](https://img.shields.io/github/license/HeyOkay/HaloBattery?color=lightgrey)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/KosmoSakura/HaloBattery?color=lightgrey)](LICENSE)
 
 ### [⬇ Download the latest version](../../releases/latest)
 

@@ -7,10 +7,10 @@
 **把你的无线鼠标、键盘、耳机和手柄的电量，直接放进 Windows 托盘。**<br>
 每个设备一个图标，不需要任何厂商软件。
 
-[![Latest release](https://img.shields.io/github/v/release/HeyOkay/HaloBattery?label=release&color=2ea043)](../../releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/HeyOkay/HaloBattery/total?color=2ea043)](../../releases)
+[![Latest release](https://img.shields.io/github/v/release/KosmoSakura/HaloBattery?label=release&color=2ea043)](../../releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/KosmoSakura/HaloBattery/total?color=2ea043)](../../releases)
 [![Windows 10 / 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#安装)
-[![License: MIT](https://img.shields.io/github/license/HeyOkay/HaloBattery?color=lightgrey)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/KosmoSakura/HaloBattery?color=lightgrey)](LICENSE)
 
 ### [⬇ 下载最新版本](../../releases/latest)
 
