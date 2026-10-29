@@ -25,6 +25,7 @@ import time
 from typing import Callable, List, Optional, Tuple
 
 from . import flyout
+from . import i18n
 
 log = logging.getLogger("halo_battery")
 
@@ -283,18 +284,18 @@ def visible_blocks(blocks: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
 
 
 def nice_date(iso: str) -> str:
-    """'2026-10-05' -> '5 October 2026'; anything else -> ''."""
+    """'2026-10-05' -> '5 October 2026' / '2026年10月5日'; anything else -> ''."""
     try:
         d = datetime.date.fromisoformat((iso or "")[:10])
     except ValueError:
         return ""
-    return f"{d.day} {d.strftime('%B')} {d.year}"
+    return i18n.date(d)
 
 
 def subtitle(from_version: str, date: str) -> str:
     parts = []
     if from_version:
-        parts.append(f"Updated from {from_version}")
+        parts.append(i18n.t("Updated from {version}", version=from_version))
     when = nice_date(date)
     if when:
         parts.append(when)
@@ -504,10 +505,13 @@ class WhatsNewWindow:
         tkf = host._font
 
         def font(names, size, bold=False):
-            fam = next((f for f in names if f in fams), None)
+            chinese = i18n.current().startswith("zh")
+            fam = next((f for f in flyout.ui_fonts(names) if f in fams), None)
             if fam is None:                  # no semibold family here: the text font in bold
-                fam = next((f for f in TEXT_FONTS if f in fams), "TkDefaultFont")
+                fam = next((f for f in flyout.ui_fonts(TEXT_FONTS) if f in fams), "TkDefaultFont")
                 bold = bold or names is not TEXT_FONTS
+            elif chinese and names is not TEXT_FONTS:
+                bold = True                  # YaHei has no semibold face: use the bold weight
             if fam == "TkDefaultFont":
                 f = tkf.nametofont("TkDefaultFont").copy()
                 f.configure(size=-px(size), weight="bold" if bold else "normal")
@@ -527,8 +531,9 @@ class WhatsNewWindow:
         self.version, self.from_version, self.date = version, from_version, date
         self.blocks = visible_blocks(parse_notes(notes_md))
         if not self.blocks:
-            self.blocks = [("para", "The release notes could not be loaded. "
-                                    "They are on the release page.")]
+            self.blocks = [("para", i18n.t("The release notes could not be loaded. "
+                                           "They are on the release page."))]
+        self.got_text = i18n.t("Got it")
         self.hover: Optional[str] = None       # "close" / "link" / "button"
         self.pressed: Optional[str] = None     # the part the mouse went down on
         self.thumb_drag: Optional[Tuple[int, int]] = None   # (y at the press, scroll then)
@@ -593,8 +598,8 @@ class WhatsNewWindow:
         sub = subtitle(self.from_version, self.date)
         header_h = eyebrow_h + title_h + (label_h if sub else 0)
         y = top
-        cv.create_text(x_text, y, text="What's new", font=self.f_eyebrow, fill=c["link"], anchor="nw",
-                       tags="accent")
+        cv.create_text(x_text, y, text=i18n.t("What's new"), font=self.f_eyebrow, fill=c["link"],
+                       anchor="nw", tags="accent")
         y += eyebrow_h
         cv.create_text(x_text, y - px(2), text=f"Halo Battery {self.version}", font=self.f_title,
                        fill=c["text"], anchor="nw", tags="text")
@@ -618,11 +623,11 @@ class WhatsNewWindow:
         cv.create_window(px(PAD), y, window=self.body, anchor="nw")
         y += self.body_h + px(FOOTER_GAP)
         # footer: the link on the left, the button on the right
-        bw = self.f_button.measure("Got it") + 2 * px(BUTTON_PAD_X)
+        bw = self.f_button.measure(self.got_text) + 2 * px(BUTTON_PAD_X)
         bh = px(BUTTON_H)
         self.button_box = (self.w - px(PAD) - bw, y, self.w - px(PAD), y + bh)
         self._make_buttons()
-        link_text = "Full release notes"
+        link_text = i18n.t("Full release notes")
         lw = self.f_link.measure(link_text)
         gw = self.f_icon.measure(LINK_GLYPH) + px(6) if self.f_icon else 0
         mid = y + bh // 2
@@ -731,9 +736,9 @@ class WhatsNewWindow:
                                                      fill), True)
         shift = px(1) if down else 0
         tx, ty = (bx0 + bx1) // 2, (by0 + by1) // 2 + shift
-        cv.create_text(tx, ty + px(1), text="Got it", font=self.f_button,
+        cv.create_text(tx, ty + px(1), text=self.got_text, font=self.f_button,
                        fill=c["emboss_down"] if down else c["emboss"], anchor="center", tags="chrome")
-        cv.create_text(tx, ty, text="Got it", font=self.f_button,
+        cv.create_text(tx, ty, text=self.got_text, font=self.f_button,
                        fill=c["on_accent_down"] if down else c["on_accent"],
                        anchor="center", tags="chrome")
         self._thumb = self._track = None         # redrawn below
