@@ -39,6 +39,8 @@ from typing import Callable, List, Optional, Sequence, Tuple
 
 from pystray import Menu, MenuItem as Item
 
+from . import i18n
+
 log = logging.getLogger("halo_battery")
 
 # ------------------------------------------------------------------ design
@@ -65,12 +67,24 @@ SUBMENU_DELAY_MS = 200               # hover this long to open / switch a submen
 POLL_MS = 30                         # outside clicks and focus, while the menu is open
 
 TEXT_FONTS = ("Segoe UI Variable Text", "Segoe UI")
+# Chinese needs a face that has the glyphs: Segoe UI has none, and Tk's per-glyph
+# fallback would use its own line height and cut the text in the menu.
+CJK_TEXT_FONTS = ("Microsoft YaHei UI", "Microsoft YaHei")
 TEXT_PX = 13
 ICON_FONTS = ("Segoe Fluent Icons", "Segoe MDL2 Assets")
 CHECK, CHEVRON, MINUS, PLUS, EDIT = "\uE73E", "\uE76C", "\uE738", "\uE710", "\uE70F"
 CHECK_PX, CHEVRON_PX, BUTTON_PX = 12, 10, 11
 # when neither icon font is there (not Windows 10 / 11)
 FALLBACK_GLYPHS = {CHECK: "\u2713", CHEVRON: "\u203A", MINUS: "\u2212", PLUS: "+", EDIT: "\u270E"}
+
+
+def ui_fonts(english: Sequence[str]) -> Tuple[str, ...]:
+    """The font candidates for one role: a Chinese face first while the interface is
+    Chinese (it has the glyphs, and its line height keeps the menu readable), else the
+    given English names in their order."""
+    if i18n.current().startswith("zh"):
+        return tuple(CJK_TEXT_FONTS) + tuple(english)
+    return tuple(english)
 
 # ARGB, as in the design: the first two digits are the opacity
 PALETTE = {
@@ -513,7 +527,7 @@ class _Style:
     def __init__(self, tk_font, root, families: set, scale: float, light: bool):
         self.scale = scale
         self.px = lambda v: max(1, round(v * scale))
-        text = next((f for f in TEXT_FONTS if f in families), "TkDefaultFont")
+        text = next((f for f in ui_fonts(TEXT_FONTS) if f in families), "TkDefaultFont")
         self.icon_family = next((f for f in ICON_FONTS if f in families), None)
         if text == "TkDefaultFont":
             self.font = tk_font.nametofont("TkDefaultFont").copy()
@@ -798,6 +812,11 @@ class FlyoutHost:
         if key not in self._styles:
             self._styles[key] = _Style(self._font, self._root, self._families, scale, light)
         return self._styles[key]
+
+    def forget_styles(self) -> None:
+        """Drop the cached fonts: the interface language changed, and with it the font
+        that has the glyphs (a Chinese face for Chinese, Segoe UI for English)."""
+        self._styles.clear()
 
     def _show(self, menu, icon, point) -> None:
         self.close()

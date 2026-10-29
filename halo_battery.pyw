@@ -130,7 +130,7 @@ except ImportError:
 import pystray  # noqa: E402
 from pystray import Menu, MenuItem as Item  # noqa: E402
 
-from halo import flyout, history, icons, updates, whatsnew, winevents  # noqa: E402
+from halo import flyout, history, i18n, icons, updates, whatsnew, winevents  # noqa: E402
 from providers import hidlist  # noqa: E402
 from providers import (AmInfinityProvider, AstroProvider, AsusProvider,  # noqa: E402
                        AudezeProvider, BarracudaProvider, BluetoothProvider, CorsairProvider, DeviceStatus,
@@ -174,6 +174,9 @@ DEFAULTS = {
     "quiet_fullscreen": True,  # while a game is full screen: hold alerts, poll every 5 min
     "keep_disconnected": False,  # keep a gone device's icon, greyed with its last level, until restart (#151)
     "status_file": False,      # write status.json for Rainmeter, Stream Deck, scripts
+    # the interface language: "auto" follows the Windows display language, or a code
+    # that has a file in lang/ ("en", "zh-CN", ...); see Preferences > Language
+    "language": "auto",
 }
 
 # Preferences > Device types: provider name -> what the user sees. Windows Bluetooth
@@ -353,25 +356,28 @@ def running_from_temp() -> bool:
 
 # The texts of the app's notifications.
 def low_battery_text(name: str, level: Optional[int], approx: bool) -> str:
-    left = "battery is low" if approx else f"{level}% left"
-    return f"{name}: {left}. Time to charge."
+    if approx:
+        return i18n.t("{name}: battery is low. Time to charge.", name=name)
+    return i18n.t("{name}: {level}% left. Time to charge.", name=name, level=level)
 
 
 def fully_charged_text(name: str) -> str:
-    return f"{name} is fully charged."
+    return i18n.t("{name} is fully charged.", name=name)
 
 
 def update_text(latest: str, install: bool = True) -> str:
-    action = f"Update to v{latest}" if install else f"Download v{latest}…"
-    return (f"Version {latest} is available. Right-click a battery icon "
-            f"and choose \"{action}\".")
+    action = (i18n.t("Update to v{latest}", latest=latest) if install
+              else i18n.t("Download v{latest}…", latest=latest))
+    return i18n.t("Version {latest} is available. Right-click a battery icon "
+                  "and choose \"{action}\".", latest=latest, action=action)
 
 
 def update_item_text(latest: str, install: bool, progress: Optional[int] = None) -> str:
     """The menu item for a newer release: what it does now."""
     if progress is not None:
-        return f"Downloading v{latest}… {progress}%"
-    return f"Update to v{latest}" if install else f"Download v{latest}…"
+        return i18n.t("Downloading v{latest}… {progress}%", latest=latest, progress=progress)
+    return (i18n.t("Update to v{latest}", latest=latest) if install
+            else i18n.t("Download v{latest}…", latest=latest))
 
 
 # Windows titles a notification with the app that sent it. Without an id of its own the
@@ -817,23 +823,23 @@ def describe(st: DeviceStatus, name: Optional[str] = None, left: str = "") -> st
     """The tooltip text. `name` replaces the device's own name (set with "Rename..."),
     `left` is the estimated time left ("about 5 h of use left"), shown only while the
     device is awake and on battery."""
-    return f"{name or st.name}: {device_state(st, left)}"
+    return i18n.t("{name}: {state}", name=name or st.name, state=device_state(st, left))
 
 
 def device_state(st: DeviceStatus, left: str = "") -> str:
     """The part of describe() after the name: "85%, charging", "no link ..."."""
     if st.approx:
-        state = st.approx          # XInput: coarse levels or "not reported yet", never a fake "NN%"
+        state = i18n.t(st.approx)  # XInput: coarse levels or "not reported yet", never a fake "NN%"
     elif st.level is None:
-        state = "no link (off or asleep)"
+        state = i18n.t("no link (off or asleep)")
     else:
         state = f"{st.level}%"
         if st.charging:
-            state += ", charging"
+            state += i18n.t(", charging")
         if not st.online:
-            state += " (last known value, device asleep)"
+            state += i18n.t(" (last known value, device asleep)")
         elif left and not st.charging:
-            state += f", {left}"
+            state += i18n.t(", {left}", left=left)
     return state
 
 
@@ -884,10 +890,12 @@ def ask_name(current: str) -> Optional[str]:
     the command line, so quotes or other characters in a name do no harm."""
     if sys.platform != "win32":
         return None
+    prompt = i18n.t("New name for this device:").replace("'", "''")
+    title = i18n.t("Halo Battery - Rename").replace("'", "''")
     script = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
               "Add-Type -AssemblyName Microsoft.VisualBasic; "
-              "[Microsoft.VisualBasic.Interaction]::InputBox("
-              "'New name for this device:', 'Halo Battery - Rename', $env:HALO_BATTERY_NAME)")
+              f"[Microsoft.VisualBasic.Interaction]::InputBox('{prompt}', '{title}', "
+              "$env:HALO_BATTERY_NAME)")
     try:
         res = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -1095,7 +1103,8 @@ class App:
             if owner and owner.status:
                 return self.display_name(owner.status) or owner.status.name
             hidden = len(self._settings_map("hidden"))
-            return f"No devices shown ({hidden} hidden)" if hidden else "No devices found"
+            return (i18n.t("No devices shown ({hidden} hidden)", hidden=hidden) if hidden
+                    else i18n.t("No devices found"))
 
         def header_detail():
             if owner and owner.status:
@@ -1131,6 +1140,16 @@ class App:
                 self.wake.set()
             return _f
 
+        def set_language(code):
+            def _f(icon, item):
+                self.cfg["language"] = code
+                save_config(self.cfg)
+                i18n.load(code)
+                if self.flyout is not None:
+                    self.flyout.forget_styles()      # the font follows the language
+                self.refresh_menus()
+            return _f
+
         def set_theme(mode):
             def _f(icon, item):
                 self.cfg["icon_theme"] = mode
@@ -1142,17 +1161,20 @@ class App:
         def toggle_autostart(icon, item):
             try:
                 if not set_autostart(not autostart_enabled()):
-                    icon.notify(TEMP_AUTOSTART_TEXT, "Start with Windows")
+                    icon.notify(i18n.t(TEMP_AUTOSTART_TEXT), i18n.t("Start with Windows"))
             except OSError as e:
                 log.warning("autostart: %s", e)
 
-        intervals = [(15, "15 s"), (30, "30 s"), (60, "1 min"), (120, "2 min"), (300, "5 min")]
-        themes = [("auto", "Automatic"), ("white", "White"), ("black", "Black")]
-        lows = [(0, "Off"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%"), (25, "25%"), (30, "30%")]
+        intervals = [(15, i18n.t("15 s")), (30, i18n.t("30 s")), (60, i18n.t("1 min")),
+                     (120, i18n.t("2 min")), (300, i18n.t("5 min"))]
+        themes = [("auto", i18n.t("Automatic")), ("white", i18n.t("White")),
+                  ("black", i18n.t("Black"))]
+        lows = [(0, i18n.t("Off")), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%"),
+                (25, "25%"), (30, "30%")]
 
         def update_text(_item):
             if not self.update:
-                return "Download update…"
+                return i18n.t("Download update…")
             return update_item_text(self.update.version, getattr(self, "install_ok", False),
                                     getattr(self, "update_progress", None))
 
@@ -1180,7 +1202,8 @@ class App:
 
         def default_low_text(_item):
             low = self.cfg["low"]
-            return f"Default ({low}%)" if low else "Default (off)"
+            return (i18n.t("Default ({low}%)", low=low) if low
+                    else i18n.t("Default (off)"))
 
         def provider_on(name):
             return lambda _item: name not in self.disabled_providers()
@@ -1190,70 +1213,77 @@ class App:
 
         def provider_items():
             for name, label in sorted(PROVIDER_LABELS.items(), key=lambda kv: kv[1].lower()):
-                yield Item(label, flip_provider(name), checked=provider_on(name))
+                yield Item(i18n.t(label), flip_provider(name), checked=provider_on(name))
 
         def hidden_items():
             # built each time the menu opens, so it always shows the current list
             hidden = self._settings_map("hidden")
             for key, name in sorted(hidden.items(), key=lambda kv: str(kv[1]).lower()):
-                yield Item(f"Show {name}", show_again(key))
+                yield Item(i18n.t("Show {name}", name=name), show_again(key))
 
         # items for the device of this icon only (the "no devices" icon has none)
         device_items = [
             # the flyout has the pencil next to the name instead
-            flyout.classic_only(Item("Rename…", lambda i, it: self.rename(owner))),
-            Item("Reset name", lambda i, it: self.reset_name(owner), visible=renamed),
-            Item("Icon", Menu(*[Item(label, pick(value), checked=picked(value), radio=True)
-                                for value, label in PICTOGRAM_CHOICES])),
-            Item("Low battery alert at", Menu(
+            flyout.classic_only(Item(i18n.t("Rename…"), lambda i, it: self.rename(owner))),
+            Item(i18n.t("Reset name"), lambda i, it: self.reset_name(owner), visible=renamed),
+            Item(i18n.t("Icon"), Menu(*[Item(i18n.t(label), pick(value), checked=picked(value),
+                                             radio=True)
+                                        for value, label in PICTOGRAM_CHOICES])),
+            Item(i18n.t("Low battery alert at"), Menu(
                 Item(default_low_text, pick_device_low(None), checked=device_low_picked(None), radio=True),
                 *[Item(t, pick_device_low(p), checked=device_low_picked(p), radio=True)
                   for p, t in lows])),
-            Item("Hide this device", lambda i, it: self.hide(owner)),
+            Item(i18n.t("Hide this device"), lambda i, it: self.hide(owner)),
         ] if owner is not None else []
 
         # all settings in one submenu, so the main menu keeps only the things used often
         preferences = Menu(
+            Item(i18n.t("Language"), Menu(*[
+                Item(label, set_language(code),
+                     checked=lambda it, c=code: i18n.current() == c, radio=True)
+                for code, label in i18n.available().items()])),
             # - / + in the menu; the classic menu shows them as a list to pick from
-            flyout.CounterItem("Poll interval", intervals, lambda: self.cfg["interval"], set_interval),
-            flyout.CounterItem("Low battery alert", lows, lambda: self.cfg["low"], set_low),
-            Item("Alert when fully charged", toggle("full_alert"),
+            flyout.CounterItem(i18n.t("Poll interval"), intervals,
+                               lambda: self.cfg["interval"], set_interval),
+            flyout.CounterItem(i18n.t("Low battery alert"), lows,
+                               lambda: self.cfg["low"], set_low),
+            Item(i18n.t("Alert when fully charged"), toggle("full_alert"),
                  checked=lambda it: self.cfg.get("full_alert", True)),
-            Item("Estimated time left", toggle("time_left"),
+            Item(i18n.t("Estimated time left"), toggle("time_left"),
                  checked=lambda it: self.cfg.get("time_left", True)),
-            Item("Quiet while gaming", toggle("quiet_fullscreen"),
+            Item(i18n.t("Quiet while gaming"), toggle("quiet_fullscreen"),
                  checked=lambda it: self.cfg.get("quiet_fullscreen", True)),
             # for full-screen games, where the notification is not seen (#66)
-            Item("Sound with the low battery alert", toggle("low_sound"),
+            Item(i18n.t("Sound with the low battery alert"), toggle("low_sound"),
                  checked=lambda it: self.cfg.get("low_sound", False)),
-            Item("Keep disconnected devices until restart", toggle("keep_disconnected"),
+            Item(i18n.t("Keep disconnected devices until restart"), toggle("keep_disconnected"),
                  checked=lambda it: self.cfg.get("keep_disconnected", False)),
             Menu.SEPARATOR,
-            Item("Windows Bluetooth devices", toggle("bluetooth"),
+            Item(i18n.t("Windows Bluetooth devices"), toggle("bluetooth"),
                  checked=lambda it: self.cfg["bluetooth"]),
             # off: a PS4 / PS5 controller over Bluetooth shows its level only while Steam or a
             # game has it in the full mode; on: the app switches it, which some games do not
             # survive until the controller is turned off and on (#96)
-            Item("PlayStation full mode (Bluetooth)", toggle("playstation_full_mode"),
+            Item(i18n.t("PlayStation full mode (Bluetooth)"), toggle("playstation_full_mode"),
                  checked=lambda it: self.cfg.get("playstation_full_mode", False)),
-            Item("Device types", Menu(provider_items)),
-            Item("Device pictogram", toggle("badges"),
+            Item(i18n.t("Device types"), Menu(provider_items)),
+            Item(i18n.t("Device pictogram"), toggle("badges"),
                  checked=lambda it: self.cfg["badges"]),
-            Item("Percentage in the icon", toggle("percent_in_icon"),
+            Item(i18n.t("Percentage in the icon"), toggle("percent_in_icon"),
                  checked=lambda it: self.cfg.get("percent_in_icon", False)),
-            Item("Charging animation", toggle("animation"),
+            Item(i18n.t("Charging animation"), toggle("animation"),
                  checked=lambda it: self.cfg["animation"]),
-            Item("Icon colour", Menu(*[
+            Item(i18n.t("Icon colour"), Menu(*[
                 Item(t, set_theme(m), checked=lambda it, m=m: self.cfg.get("icon_theme", "auto") == m, radio=True)
                 for m, t in themes])),
             Menu.SEPARATOR,
-            Item("Status file for other apps", toggle("status_file"),
+            Item(i18n.t("Status file for other apps"), toggle("status_file"),
                  checked=lambda it: self.cfg.get("status_file", False)),
-            Item("Start with Windows", toggle_autostart,
+            Item(i18n.t("Start with Windows"), toggle_autostart,
                  checked=lambda it: autostart_enabled()),
-            Item("Check for updates", toggle("update_check"),
+            Item(i18n.t("Check for updates"), toggle("update_check"),
                  checked=lambda it: self.cfg.get("update_check", True)),
-            Item("Check for updates now", lambda i, it: self.check_update_now()),
+            Item(i18n.t("Check for updates now"), lambda i, it: self.check_update_now()),
         )
 
         return Menu(
@@ -1263,13 +1293,13 @@ class App:
                  visible=lambda it: self.update is not None),
             *device_items,
             Menu.SEPARATOR,
-            Item("Refresh now", lambda i, it: self.wake.set(), default=True),
-            Item("Preferences", preferences),
-            Item("Hidden devices", Menu(hidden_items),
+            Item(i18n.t("Refresh now"), lambda i, it: self.wake.set(), default=True),
+            Item(i18n.t("Preferences"), preferences),
+            Item(i18n.t("Hidden devices"), Menu(hidden_items),
                  visible=lambda it: bool(self._settings_map("hidden"))),
             Menu.SEPARATOR,
-            Item("Diagnostics…", lambda i, it: self.request_diag()),
-            Item(f"Exit (v{VERSION})", lambda i, it: self.quit()),
+            Item(i18n.t("Diagnostics…"), lambda i, it: self.request_diag()),
+            Item(i18n.t("Exit (v{version})", version=VERSION), lambda i, it: self.quit()),
         )
 
     # ---------------- hide / rename
@@ -1549,7 +1579,8 @@ class App:
     def write_diag(self, results: List[DeviceStatus]):
         lines = [f"{APP_TITLE} v{VERSION}  {time.strftime('%Y-%m-%d %H:%M:%S')}",
                  f"Python {sys.version.split()[0]}  {sys.platform}",
-                 f"data folder: {DATA_DIR}" + ("  (portable)" if PORTABLE else ""), ""]
+                 f"data folder: {DATA_DIR}" + ("  (portable)" if PORTABLE else ""),
+                 i18n.status(), ""]
         lines.append("=== Poll result ===")
         lines += [describe(s) + f"   [{s.key}]" for s in results] or ["(nothing)"]
         hidden, names = self._settings_map("hidden"), self._settings_map("names")
@@ -2104,7 +2135,8 @@ class App:
             self.cfg["update_last"] = time.time() - updates.CHECK_EVERY + 3 * 3600
             save_config(self.cfg)
             if manual:
-                self.notify_any(f"Could not check for updates: {e}", f"{APP_TITLE} update")
+                self.notify_any(i18n.t("Could not check for updates: {error}", error=e),
+                                i18n.t("{name} update", name=APP_TITLE))
             return
         self.cfg.update(update_last=time.time(), update_latest=rel.version, update_url=rel.url)
         if updates.is_newer(rel.version, VERSION):
@@ -2113,12 +2145,14 @@ class App:
             self.refresh_menus()
             if manual or self.cfg.get("update_notified") != rel.version:
                 self.cfg["update_notified"] = rel.version
-                self.notify_any(update_text(rel.version, self.install_ok), f"{APP_TITLE} update")
+                self.notify_any(update_text(rel.version, self.install_ok),
+                                i18n.t("{name} update", name=APP_TITLE))
         else:
             self.update = None
             self.refresh_menus()
             if manual:
-                self.notify_any(f"You have the latest version (v{VERSION}).", f"{APP_TITLE} update")
+                self.notify_any(i18n.t("You have the latest version (v{version}).", version=VERSION),
+                                i18n.t("{name} update", name=APP_TITLE))
         save_config(self.cfg)
 
     # ---------------- installing an update
@@ -2143,8 +2177,9 @@ class App:
                     if not updates.is_newer(rel.version, VERSION):
                         raise ValueError(f"v{VERSION} is already the latest version")
                     self.update = rel
-                self.notify_any(f"Downloading version {rel.version}. Halo Battery restarts "
-                                f"by itself when it is ready.", f"{APP_TITLE} update")
+                self.notify_any(i18n.t("Downloading version {version}. Halo Battery restarts "
+                                       "by itself when it is ready.", version=rel.version),
+                                i18n.t("{name} update", name=APP_TITLE))
                 staging = updates.staging_dir()
                 new_app = updates.download(rel, staging, VERSION, progress=self._update_progress)
                 self.cfg.update(update_from=VERSION, update_staging=staging,
@@ -2159,8 +2194,9 @@ class App:
             log.warning("update failed: %s", e)
             self.update_progress = None
             self.refresh_menus()
-            self.notify_any(f"The update could not be installed ({e}). The release page "
-                            f"is open, so it can be downloaded by hand.", f"{APP_TITLE} update")
+            self.notify_any(i18n.t("The update could not be installed ({error}). The release page "
+                                   "is open, so it can be downloaded by hand.", error=e),
+                            i18n.t("{name} update", name=APP_TITLE))
             self.open_update()
             return
         self.quit()                                  # the runner waits for this exit
@@ -2319,6 +2355,8 @@ def show_whats_new_only() -> None:
 
 def main():
     global VERSION, PRETEND_VERSION
+    # the interface language, before any window (or menu) is built
+    i18n.load(load_config().get("language"))
     # before any window exists: without it Windows draws the app at 100 % and
     # stretches it on a scaled screen, which made the menu text small and blurry
     flyout.enable_dpi_awareness()
